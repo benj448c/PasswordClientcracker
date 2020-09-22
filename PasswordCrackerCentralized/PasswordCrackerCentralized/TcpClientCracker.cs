@@ -19,7 +19,7 @@ namespace PasswordCrackerCentralized
             Does(socket);
         }
 
-        private List<UserInfoClearText> DoHack(WorkInfo work)
+        private async Task<List<UserInfoClearText>> DoHack(WorkInfo work)
         {
 
 
@@ -39,28 +39,39 @@ namespace PasswordCrackerCentralized
                 StreamReader sr = new StreamReader(ns);
                 StreamWriter sw = new StreamWriter(ns);
                 sw.AutoFlush = true;
-
+                Console.WriteLine("listening");
+                string message = Console.ReadLine();
                 while (hackInProgress)
                 {
-                    Console.WriteLine("listening");
-                    string message = Console.ReadLine();
-
+                    
                     switch (message)
                     {
                         case "hack":
                             sw.WriteLine("hack");
                             string jsonstring = sr.ReadLine();
-                            Console.WriteLine(jsonstring);
-                            Task.Run(() =>
+                            Task.Run(async () =>
                             {
                                 System.Console.WriteLine("Starting hack!!");
                                 WorkInfo work = JsonConvert.DeserializeObject<WorkInfo>(jsonstring);
-                                sw.WriteLine(JsonConvert.SerializeObject(DoHack(work)));
-                                sw.WriteLine("completed");
-                                sw.WriteLine(work.Id);
+                                if (work.WordList.Count > 0)
+                                {
+                                    Console.WriteLine(work.WordList.Count + work.WordList[0]);
+                                    List<UserInfoClearText> list = await DoHack(work);
+                                    sw.WriteLine(JsonConvert.SerializeObject(list));
+                                    sw.WriteLine("completed");
+                                    sw.WriteLine(work.Id);
+                                    message = "hack";
+                                    Console.WriteLine("new hack");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("no more dicts");
+                                    hackInProgress = false;
+                                }
                             });
                             break;
                     }
+                    message = null;
                 }
 
 

@@ -17,15 +17,20 @@ namespace PasswordCrackerCentralized
             TcpClient socket = new TcpClient(host, port);
 
             Does(socket);
+            Console.WriteLine("Disconnecting");
+            socket?.Close();
         }
 
         private async Task<List<UserInfoClearText>> DoHack(WorkInfo work)
         {
 
+            Cracking crack = new Cracking();
 
-            Cracking crack  = new Cracking();
+            List<UserInfoClearText> result = await Task.Run(() => crack.RunCracking(work));
 
-            return crack.RunCracking(work);
+            return result;
+
+
 
         }
 
@@ -43,38 +48,64 @@ namespace PasswordCrackerCentralized
                 string message = Console.ReadLine();
                 while (hackInProgress)
                 {
-                    
+                    if (message != null)
+                    {
+                        Console.WriteLine("sending - " + message);
+                    }
+
+
+
+
                     switch (message)
                     {
                         case "hack":
-                            sw.WriteLine("hack");
-                            string jsonstring = sr.ReadLine();
-                            Task.Run(async () =>
+                            message = null;
+                            if (socket.Connected == false)
                             {
-                                System.Console.WriteLine("Starting hack!!");
-                                WorkInfo work = JsonConvert.DeserializeObject<WorkInfo>(jsonstring);
-                                if (work.WordList.Count > 0)
+                                Console.WriteLine("connection lost");
+                                hackInProgress = false;
+                            }
+                            else if (sr.BaseStream != null)
+                            {
+                                sw.WriteLine("hack");
+                                try
                                 {
-                                    Console.WriteLine(work.WordList.Count + work.WordList[0]);
-                                    List<UserInfoClearText> list = await DoHack(work);
-                                    sw.WriteLine(JsonConvert.SerializeObject(list));
-                                    sw.WriteLine("completed");
-                                    sw.WriteLine(work.Id);
-                                    message = "hack";
-                                    Console.WriteLine("new hack");
+                                    string jsonstring = sr.ReadLine();
+
+
+                                    Task.Run(async () =>
+                                    {
+                                        System.Console.WriteLine("Starting hack!!");
+                                        WorkInfo work = JsonConvert.DeserializeObject<WorkInfo>(jsonstring);
+                                        if (work.WordList.Count > 0)
+                                        {
+                                            Console.WriteLine(work.WordList.Count + work.WordList[0]);
+                                            List<UserInfoClearText> list = await DoHack(work);
+                                            sw.WriteLine("passwordfound");
+                                            sw.WriteLine(JsonConvert.SerializeObject(list));
+                                            sw.WriteLine("completed");
+                                            sw.WriteLine(work.Id);
+                                            Console.WriteLine("new hack");
+                                            message = "hack";
+
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine("no more dicts");
+                                            hackInProgress = false;
+                                        }
+                                    });
                                 }
-                                else
+                                catch (Exception e)
                                 {
-                                    Console.WriteLine("no more dicts");
-                                    hackInProgress = false;
+                                    Console.WriteLine(e.Message);
                                 }
-                            });
+
+                            }
+
                             break;
                     }
-                    message = null;
                 }
-
-
             }
         }
     }
